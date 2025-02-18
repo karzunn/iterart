@@ -42,25 +42,31 @@ class Render:
         cl.enqueue_copy(self.queue, self.z_imag, d_z_imag).wait()
 
     def run(self, equation: str):
-        d_c_real, d_c_imag, d_z_real, d_z_imag, d_image_data = self._get_buffers()
-        global_size = (len(self.c_real),)
         iter_count = 0
         while iter_count < self.max_iter:
+            d_c_real, d_c_imag, d_z_real, d_z_imag, d_image_data = self._get_buffers()
             current_iter = min(10000, self.max_iter - iter_count)
             kernel_str = kernel(self.image, equation, current_iter, self.bail_mag, self.bounds)
             program = cl.Program(self.ctx, kernel_str).build()
-            program.render(self.queue, global_size, None, d_c_real, d_c_imag, d_z_real, d_z_imag, d_image_data)
+            program.render(
+                self.queue,
+                (len(self.c_real),),
+                None,
+                d_c_real,
+                d_c_imag,
+                d_z_real,
+                d_z_imag,
+                d_image_data
+            )
             self._collect_data(d_z_real, d_z_imag, d_image_data)
 
-            mask = self.z_real**2 + self.z_imag**2 < self.bail_mag
-            self.c_real = self.c_real[mask]
-            self.c_imag = self.c_imag[mask]
-            self.z_real = self.z_real[mask]
-            self.z_imag = self.z_imag[mask]
+            valid = self.z_real**2 + self.z_imag**2 < self.bail_mag
+            self.c_real = self.c_real[valid]
+            self.c_imag = self.c_imag[valid]
+            self.z_real = self.z_real[valid]
+            self.z_imag = self.z_imag[valid]
 
             if len(self.c_real) == 0:
                 break
 
-            d_c_real, d_c_imag, d_z_real, d_z_imag, d_image_data = self._get_buffers()
-            global_size = (len(self.c_real),)
             iter_count += current_iter
