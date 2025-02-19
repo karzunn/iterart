@@ -4,69 +4,71 @@ from .kernel import kernel
 from .shared import Bounds
 from .image import Image
 
-
-
-class Render:
-
-    def __init__(self, image: Image, step_size: float, max_iter: int, bounds: Bounds, bail_mag: float = 4.0):
-        self.image = image
-        self.step_size = step_size
-        self.max_iter = max_iter
-        self.bounds = bounds
-        self.bail_mag = bail_mag
+class GPU:
+    def __init__(self):
         self.ctx = cl.create_some_context()
         self.queue = cl.CommandQueue(self.ctx)
         self.mf = cl.mem_flags
-        self.c_real, self.c_imag, self.z_real, self.z_imag = self._init_arrays()
 
-    def _init_arrays(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        real_vals = np.arange(self.bounds.x_min, self.bounds.x_max, self.step_size, dtype=np.float32)
-        imag_vals = np.arange(self.bounds.y_min, self.bounds.y_max, self.step_size, dtype=np.float32)
-        c_real, c_imag = np.meshgrid(real_vals, imag_vals)
-        c_real, c_imag = c_real.flatten(), c_imag.flatten()
-        z_real = np.zeros(len(c_real), dtype=np.uint32)
-        z_imag = np.zeros(len(c_real), dtype=np.uint32)
-        return c_real, c_imag, z_real, z_imag
-    
-    def _get_buffers(self) -> tuple[cl.Buffer, cl.Buffer, cl.Buffer, cl.Buffer, cl.Buffer]:
-        d_c_real = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, hostbuf=self.c_real)
-        d_c_imag = cl.Buffer(self.ctx, self.mf.READ_ONLY | self.mf.COPY_HOST_PTR, hostbuf=self.c_imag)
-        d_z_real = cl.Buffer(self.ctx, self.mf.READ_WRITE | self.mf.COPY_HOST_PTR, hostbuf=self.z_real)
-        d_z_imag = cl.Buffer(self.ctx, self.mf.READ_WRITE | self.mf.COPY_HOST_PTR, hostbuf=self.z_imag)
-        d_image_data = cl.Buffer(self.ctx, self.mf.READ_WRITE | self.mf.COPY_HOST_PTR, hostbuf=self.image.data)
-        return d_c_real, d_c_imag, d_z_real, d_z_imag, d_image_data
-    
-    def _collect_data(self, d_z_real: cl.Buffer, d_z_imag: cl.Buffer, d_image_data: cl.Buffer):
-        cl.enqueue_copy(self.queue, self.image.data, d_image_data).wait()
-        cl.enqueue_copy(self.queue, self.z_real, d_z_real).wait()
-        cl.enqueue_copy(self.queue, self.z_imag, d_z_imag).wait()
+def _init_arrays(step_size: float, bounds: Bounds) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    real_vals = np.arange(bounds.x_min, bounds.x_max, step_size, dtype=np.float32)
+    imag_vals = np.arange(bounds.y_min, bounds.y_max, step_size, dtype=np.float32)
+    c_real, c_imag = np.meshgrid(real_vals, imag_vals)
+    c_real, c_imag = c_real.flatten(), c_imag.flatten()
+    z_real = np.zeros(len(c_real), dtype=np.uint32)
+    z_imag = np.zeros(len(c_real), dtype=np.uint32)
+    return c_real, c_imag, z_real, z_imag
 
-    def run(self, equation: str):
-        iter_count = 0
-        while iter_count < self.max_iter:
-            d_c_real, d_c_imag, d_z_real, d_z_imag, d_image_data = self._get_buffers()
-            current_iter = min(10000, self.max_iter - iter_count)
-            kernel_str = kernel(self.image, equation, current_iter, self.bail_mag, self.bounds)
-            program = cl.Program(self.ctx, kernel_str).build()
-            program.render(
-                self.queue,
-                (len(self.c_real),),
-                None,
-                d_c_real,
-                d_c_imag,
-                d_z_real,
-                d_z_imag,
-                d_image_data
-            )
-            self._collect_data(d_z_real, d_z_imag, d_image_data)
+def _get_array_buffer(gpu: GPU, arr: np.ndarray, read_only: bool = False) -> cl.Buffer:
+    if read_only:
+        return cl.Buffer(gpu.ctx, gpu.mf.READ_ONLY | gpu.mf.COPY_HOST_PTR, hostbuf=arr)
+    return cl.Buffer(gpu.ctx, gpu.mf.READ_WRITE | gpu.mf.COPY_HOST_PTR, hostbuf=arr)
 
-            valid = self.z_real**2 + self.z_imag**2 < self.bail_mag
-            self.c_real = self.c_real[valid]
-            self.c_imag = self.c_imag[valid]
-            self.z_real = self.z_real[valid]
-            self.z_imag = self.z_imag[valid]
+def _collect_array(gpu: GPU, buffer: cl.Buffer, arr: np.ndarray):
+    cl.enqueue_copy(gpu.queue, arr, buffer).wait()
 
-            if len(self.c_real) == 0:
-                break
+def nebulabrot(
+        gpu: GPU,
+        image: Image,
+        equation: str,
+        step_size: float,
+        max_iter: int,
+        bounds: Bounds,
+        bail_mag: float = 4.0
+    ) -> Image:
+    c_real, c_imag, z_real, z_imag = _init_arrays(step_size, bounds)
+    iter_count = 0
+    while iter_count < max_iter:
+        current_iter = min(10000, max_iter - iter_count)
+        d_c_real = _get_array_buffer(gpu, c_real, read_only=True)
+        d_c_imag = _get_array_buffer(gpu, c_imag, read_only=True)
+        d_z_real = _get_array_buffer(gpu, z_real)
+        d_z_imag = _get_array_buffer(gpu, z_imag)
+        d_image_data = _get_array_buffer(gpu, image.data)
+        kernel_str = kernel(image, equation, current_iter, bail_mag, bounds)
+        program = cl.Program(gpu.ctx, kernel_str).build()
+        program.render(
+            gpu.queue,
+            (len(c_real),),
+            None,
+            d_c_real,
+            d_c_imag,
+            d_z_real,
+            d_z_imag,
+            d_image_data
+        )
+        _collect_array(gpu, d_z_real, z_real)
+        _collect_array(gpu, d_z_imag, z_imag)
+        _collect_array(gpu, d_image_data, image.data)
 
-            iter_count += current_iter
+        valid = z_real**2 + z_imag**2 < bail_mag
+        c_real = c_real[valid]
+        c_imag = c_imag[valid]
+        z_real = z_real[valid]
+        z_imag = z_imag[valid]
+
+        if len(c_real) == 0:
+            break
+
+        iter_count += current_iter
+    return image
