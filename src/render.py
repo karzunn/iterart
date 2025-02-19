@@ -1,8 +1,11 @@
+import cv2
 import numpy as np
 import pyopencl as cl
+from PIL import Image
 from .kernel import kernel
-from .shared import Bounds
-from .image import Image
+from .shared import Bounds, ImageConfig
+
+
 
 class GPU:
     def __init__(self):
@@ -29,13 +32,14 @@ def _collect_array(gpu: GPU, buffer: cl.Buffer, arr: np.ndarray):
 
 def nebulabrot(
         gpu: GPU,
-        image: Image,
+        image_config: ImageConfig,
         equation: str,
         step_size: float,
         max_iter: int,
         bounds: Bounds,
         bail_mag: float = 4.0
     ) -> Image:
+    image_data = np.zeros(image_config.height * image_config.width, dtype=np.uint32)
     c_real, c_imag, z_real, z_imag = _init_arrays(step_size, bounds)
     iter_count = 0
     while iter_count < max_iter:
@@ -44,8 +48,8 @@ def nebulabrot(
         d_c_imag = _get_array_buffer(gpu, c_imag, read_only=True)
         d_z_real = _get_array_buffer(gpu, z_real)
         d_z_imag = _get_array_buffer(gpu, z_imag)
-        d_image_data = _get_array_buffer(gpu, image.data)
-        kernel_str = kernel(image, equation, current_iter, bail_mag, bounds)
+        d_image_data = _get_array_buffer(gpu, image_data)
+        kernel_str = kernel(image_config, equation, current_iter, bail_mag, bounds)
         program = cl.Program(gpu.ctx, kernel_str).build()
         program.render(
             gpu.queue,
@@ -59,7 +63,7 @@ def nebulabrot(
         )
         _collect_array(gpu, d_z_real, z_real)
         _collect_array(gpu, d_z_imag, z_imag)
-        _collect_array(gpu, d_image_data, image.data)
+        _collect_array(gpu, d_image_data, image_data)
 
         valid = z_real**2 + z_imag**2 < bail_mag
         c_real = c_real[valid]
@@ -71,4 +75,8 @@ def nebulabrot(
             break
 
         iter_count += current_iter
-    return image
+
+    image_data = np.log1p(image_data)
+    image_data = ((image_data / np.max(image_data)) * image_config.max_val).astype(image_config.numpy_dtype)
+    image_data = image_data.reshape(image_config.width, image_config.height)
+    return Image.fromarray(image_data, mode=image_config.pil_mode)

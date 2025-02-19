@@ -1,15 +1,45 @@
-from src.image import Image
 from src.render import nebulabrot, GPU
-from src.shared import Bounds
+from src.shared import Bounds, ImageConfig, BitDepth
+from PIL import Image
 
 gpu = GPU()
-image = Image(width=1000, height=1000)
-image = nebulabrot(
-    gpu=gpu,
-    image=image,
-    equation="add(squared(z), c)",
-    step_size=0.001,
-    max_iter=10000,
-    bounds=Bounds(-2, 2, -2, 2)
+
+bounds = Bounds(-2, 2, -2, 2)
+image_config = ImageConfig(
+    width=1000,
+    height=1000,
+    bit_depth=BitDepth.EIGHT
 )
-image.save("render.png")
+equation = "add(squared(z), c)"
+
+
+image_r = nebulabrot(
+    gpu=gpu,
+    image_config=image_config,
+    equation=equation,
+    step_size=0.002,
+    max_iter=5000,
+    bounds=bounds
+)
+
+image_g = nebulabrot(
+    gpu=gpu,
+    image_config=image_config,
+    equation=equation,
+    step_size=0.002,
+    max_iter=10000,
+    bounds=bounds
+)
+
+image_b = nebulabrot(
+    gpu=gpu,
+    image_config=image_config,
+    equation=equation,
+    step_size=0.003,
+    max_iter=20000,
+    bounds=bounds
+)
+
+rgb_image = Image.merge('RGB', (image_r, image_g, image_b))
+
+rgb_image.show()

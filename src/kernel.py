@@ -1,9 +1,8 @@
-from .image import Image
-from .shared import Bounds
+from .shared import Bounds, ImageConfig
 
 
 def kernel(
-        image: Image,
+        image_config: ImageConfig,
         equation: str,
         max_iter: int,
         bail_mag: float,
@@ -75,6 +74,6 @@ __kernel void render(
     x_max=bounds.x_max,
     y_min=bounds.y_min,
     y_max=bounds.y_max,
-    width=image.width,
-    height=image.height
+    width=image_config.width,
+    height=image_config.height
 )
