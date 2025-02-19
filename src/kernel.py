@@ -1,6 +1,7 @@
 from .shared import Bounds, ImageConfig
 
 
+
 def kernel(
         image_config: ImageConfig,
         equation: str,

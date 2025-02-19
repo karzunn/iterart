@@ -2,6 +2,8 @@ from src.render import nebulabrot, GPU
 from src.shared import Bounds, ImageConfig, BitDepth
 from PIL import Image
 
+
+
 gpu = GPU()
 
 bounds = Bounds(-2, 2, -2, 2)
