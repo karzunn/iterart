@@ -15,17 +15,32 @@ typedef struct {{
     float imag;
 }} Complex;
 
-Complex squared(Complex z) {{
-    Complex result;
-    result.real = z.real * z.real - z.imag * z.imag;
-    result.imag = 2.0f * z.real * z.imag;
-    return result;
-}}
-
 Complex add(Complex a, Complex b) {{
     Complex result;
     result.real = a.real + b.real;
     result.imag = a.imag + b.imag;
+    return result;
+}}
+
+Complex subtract(Complex a, Complex b) {{
+    Complex result;
+    result.real = a.real - b.real;
+    result.imag = a.imag - b.imag;
+    return result;
+}}
+
+Complex multiply(Complex a, Complex b) {{
+    Complex result;
+    result.real = a.real * b.real - a.imag * b.imag;
+    result.imag = a.real * b.imag + a.imag * b.real;
+    return result;
+}}
+
+Complex divide(Complex a, Complex b) {{
+    float denom = b.real * b.real + b.imag * b.imag;
+    Complex result;
+    result.real = (a.real * b.real + a.imag * b.imag) / denom;
+    result.imag = (a.imag * b.real - a.real * b.imag) / denom;
     return result;
 }}
 

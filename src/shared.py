@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Callable
 import numpy as np
 
 
@@ -17,12 +18,18 @@ class BitDepth(Enum):
     THIRTY_TWO = 32
 
 
+class DynamicRangeBoost(Enum):
+    log = "log"
+    sqrt = "sqrt"
+
+
 class ImageConfig:
 
-    def __init__(self, width: int, height: int, bit_depth: BitDepth):
+    def __init__(self, width: int, height: int, bit_depth: BitDepth, dynamic_range_boost: DynamicRangeBoost):
         self.width = width
         self.height = height
         self.bit_depth = bit_depth
+        self.dynamic_range_boost = dynamic_range_boost
 
     @property
     def max_val(self) -> int:
@@ -45,3 +52,13 @@ class ImageConfig:
             BitDepth.THIRTY_TWO: 'I'
         }
         return pil_mode_mapping[self.bit_depth]
+    
+    @property
+    def dr_func(self) -> Callable:
+        dr_func_mapping = {
+            DynamicRangeBoost.log: np.log1p,
+            DynamicRangeBoost.sqrt: np.sqrt
+        }
+        return dr_func_mapping[self.dynamic_range_boost]
+
+

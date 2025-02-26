@@ -50,16 +50,7 @@ def nebulabrot(
         d_image_data = _get_array_buffer(gpu, image_data)
         kernel_str = kernel(image_config, equation, current_iter, bail_mag, bounds)
         program = cl.Program(gpu.ctx, kernel_str).build()
-        program.render(
-            gpu.queue,
-            (len(c_real),),
-            None,
-            d_c_real,
-            d_c_imag,
-            d_z_real,
-            d_z_imag,
-            d_image_data
-        )
+        program.render(gpu.queue, (len(c_real),), None, d_c_real, d_c_imag, d_z_real, d_z_imag, d_image_data)
         _collect_array(gpu, d_z_real, z_real)
         _collect_array(gpu, d_z_imag, z_imag)
         _collect_array(gpu, d_image_data, image_data)
@@ -75,7 +66,7 @@ def nebulabrot(
 
         iter_count += current_iter
 
-    image_data = np.log1p(image_data)
+    image_data = image_config.dr_func(image_data)
     image_data = ((image_data / np.max(image_data)) * image_config.max_val).astype(image_config.numpy_dtype)
     image_data = image_data.reshape(image_config.width, image_config.height)
     return Image.fromarray(image_data, mode=image_config.pil_mode)
