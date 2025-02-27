@@ -1,5 +1,5 @@
 # Overview
-```iterart``` is a collection of functions to generate renderings based on iterative functions.
+```iterart``` is a collection of tools to generate renderings based on iterative functions.
 
 # Installation
 ```
