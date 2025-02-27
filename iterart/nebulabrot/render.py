@@ -2,15 +2,8 @@ import numpy as np
 import pyopencl as cl
 from PIL import Image
 from .kernel import kernel
-from .shared import Bounds, ImageConfig
+from ..shared import Bounds, ImageConfig, GPU
 
-
-
-class GPU:
-    def __init__(self):
-        self.ctx = cl.create_some_context()
-        self.queue = cl.CommandQueue(self.ctx)
-        self.mf = cl.mem_flags
 
 def _init_arrays(step_size: float, bounds: Bounds) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     real_vals = np.arange(bounds.x_min, bounds.x_max, step_size, dtype=np.float32)
@@ -21,13 +14,16 @@ def _init_arrays(step_size: float, bounds: Bounds) -> tuple[np.ndarray, np.ndarr
     z_imag = np.zeros(len(c_real), dtype=np.uint32)
     return c_real, c_imag, z_real, z_imag
 
+
 def _get_array_buffer(gpu: GPU, arr: np.ndarray, read_only: bool = False) -> cl.Buffer:
     if read_only:
         return cl.Buffer(gpu.ctx, gpu.mf.READ_ONLY | gpu.mf.COPY_HOST_PTR, hostbuf=arr)
     return cl.Buffer(gpu.ctx, gpu.mf.READ_WRITE | gpu.mf.COPY_HOST_PTR, hostbuf=arr)
 
+
 def _collect_array(gpu: GPU, buffer: cl.Buffer, arr: np.ndarray):
     cl.enqueue_copy(gpu.queue, arr, buffer).wait()
+
 
 def nebulabrot(
         gpu: GPU,

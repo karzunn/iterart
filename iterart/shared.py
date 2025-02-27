@@ -1,6 +1,14 @@
 from enum import Enum
 from typing import Callable
 import numpy as np
+import pyopencl as cl
+
+
+class GPU:
+    def __init__(self):
+        self.ctx = cl.create_some_context()
+        self.queue = cl.CommandQueue(self.ctx)
+        self.mf = cl.mem_flags
 
 
 class Bounds:

@@ -1,5 +1,5 @@
-from src.render import nebulabrot, GPU
-from src.shared import Bounds, ImageConfig, BitDepth, DynamicRangeBoost
+from iterart.nebulabrot.render import nebulabrot
+from iterart.shared import Bounds, ImageConfig, BitDepth, DynamicRangeBoost, GPU
 from PIL import Image, ImageEnhance
 
 

@@ -1,5 +1,4 @@
-from .shared import Bounds, ImageConfig
-
+from ..shared import Bounds, ImageConfig
 
 
 def kernel(
