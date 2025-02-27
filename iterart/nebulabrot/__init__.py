@@ -1,1 +1,1 @@
-from render import nebulabrot
+from .render import nebulabrot

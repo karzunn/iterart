@@ -1,4 +1,4 @@
-from iterart.nebulabrot.render import nebulabrot
+from iterart.nebulabrot import nebulabrot
 from iterart.shared import Bounds, ImageConfig, BitDepth, DynamicRangeBoost, GPU
 from PIL import Image, ImageEnhance
 
@@ -13,7 +13,9 @@ image_config = ImageConfig(
     bit_depth=BitDepth.EIGHT,
     dynamic_range_boost=DynamicRangeBoost.sqrt
 )
-equation = "add(multiply(z,z),c)"
+equation = """
+z=add(multiply(z,z),c)
+"""
 
 
 low = nebulabrot(
@@ -52,4 +54,4 @@ rgb_image = Image.merge('RGB', (image_r, image_g, image_b))
 rgb_image = ImageEnhance.Contrast(rgb_image).enhance(2)
 rgb_image = rgb_image.transpose(Image.Transpose.ROTATE_270)
 
-rgb_image.save("render.png")
+rgb_image.save("color.png")

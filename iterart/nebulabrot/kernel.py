@@ -61,7 +61,7 @@ __kernel void render(
     int count = 0;
 
     for (int iter = 0; iter < {max_iter}; iter++) {{
-        z = {equation};
+        {equation};
         locations[iter] = z;
         count++;
         if (mag_squared(z) > {bail_mag}f) break;
