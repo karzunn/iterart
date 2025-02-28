@@ -2,7 +2,7 @@ import numpy as np
 import pyopencl as cl
 from PIL import Image
 from .kernel import kernel
-from ..shared import Bounds, ImageConfig, GPU
+from ..shared import Bounds, ImageConfig, GPU, get_array_buffer, collect_array
 
 
 def _init_arrays(step_size: float, bounds: Bounds) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -13,16 +13,6 @@ def _init_arrays(step_size: float, bounds: Bounds) -> tuple[np.ndarray, np.ndarr
     z_real = np.zeros(len(c_real), dtype=np.uint32)
     z_imag = np.zeros(len(c_real), dtype=np.uint32)
     return c_real, c_imag, z_real, z_imag
-
-
-def _get_array_buffer(gpu: GPU, arr: np.ndarray, read_only: bool = False) -> cl.Buffer:
-    if read_only:
-        return cl.Buffer(gpu.ctx, gpu.mf.READ_ONLY | gpu.mf.COPY_HOST_PTR, hostbuf=arr)
-    return cl.Buffer(gpu.ctx, gpu.mf.READ_WRITE | gpu.mf.COPY_HOST_PTR, hostbuf=arr)
-
-
-def _collect_array(gpu: GPU, buffer: cl.Buffer, arr: np.ndarray):
-    cl.enqueue_copy(gpu.queue, arr, buffer).wait()
 
 
 def nebulabrot(
@@ -39,17 +29,17 @@ def nebulabrot(
     iter_count = 0
     while iter_count < max_iter:
         current_iter = min(10000, max_iter - iter_count)
-        d_c_real = _get_array_buffer(gpu, c_real, read_only=True)
-        d_c_imag = _get_array_buffer(gpu, c_imag, read_only=True)
-        d_z_real = _get_array_buffer(gpu, z_real)
-        d_z_imag = _get_array_buffer(gpu, z_imag)
-        d_image_data = _get_array_buffer(gpu, image_data)
+        d_c_real = get_array_buffer(gpu, c_real, read_only=True)
+        d_c_imag = get_array_buffer(gpu, c_imag, read_only=True)
+        d_z_real = get_array_buffer(gpu, z_real)
+        d_z_imag = get_array_buffer(gpu, z_imag)
+        d_image_data = get_array_buffer(gpu, image_data)
         kernel_str = kernel(image_config, equation, current_iter, bail_mag, bounds)
         program = cl.Program(gpu.ctx, kernel_str).build()
         program.render(gpu.queue, (len(c_real),), None, d_c_real, d_c_imag, d_z_real, d_z_imag, d_image_data)
-        _collect_array(gpu, d_z_real, z_real)
-        _collect_array(gpu, d_z_imag, z_imag)
-        _collect_array(gpu, d_image_data, image_data)
+        collect_array(gpu, d_z_real, z_real)
+        collect_array(gpu, d_z_imag, z_imag)
+        collect_array(gpu, d_image_data, image_data)
 
         valid = z_real**2 + z_imag**2 < bail_mag
         c_real = c_real[valid]

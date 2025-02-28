@@ -70,3 +70,11 @@ class ImageConfig:
         return dr_func_mapping[self.dynamic_range_boost]
 
 
+def get_array_buffer(gpu: GPU, arr: np.ndarray, read_only: bool = False) -> cl.Buffer:
+    if read_only:
+        return cl.Buffer(gpu.ctx, gpu.mf.READ_ONLY | gpu.mf.COPY_HOST_PTR, hostbuf=arr)
+    return cl.Buffer(gpu.ctx, gpu.mf.READ_WRITE | gpu.mf.COPY_HOST_PTR, hostbuf=arr)
+
+
+def collect_array(gpu: GPU, buffer: cl.Buffer, arr: np.ndarray):
+    cl.enqueue_copy(gpu.queue, arr, buffer).wait()

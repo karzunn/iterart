@@ -7,7 +7,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name = 'iterart',
-    version = '0.2.0',
+    version = '0.3.0',
     author = "Carson O'Ffill",
     author_email = 'offillcarson@gmail.com',
     license = 'MIT',

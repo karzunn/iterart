@@ -69,8 +69,8 @@ __kernel void render(
 
     if (mag_squared(z) > {bail_mag}f) {{
         for (int j = 0; j < count; j++) {{
-            int px = (int)((locations[j].real - {x_min}) / ({x_max} - {x_min}) * {width});
-            int py = (int)((locations[j].imag - {y_min}) / ({y_max} - {y_min}) * {height});
+            int px = (int)((locations[j].real - {x_min}f) / ({x_max}f - {x_min}f) * {width});
+            int py = (int)((locations[j].imag - {y_min}f) / ({y_max}f - {y_min}f) * {height});
 
             if (px >= 0 && px < {width} && py >= 0 && py < {height}) {{
                 atomic_inc(&image_data[py * {width} + px]);
@@ -84,11 +84,11 @@ __kernel void render(
 """.format(
     equation=equation,
     max_iter=max_iter,
-    bail_mag=bail_mag,
-    x_min=bounds.x_min,
-    x_max=bounds.x_max,
-    y_min=bounds.y_min,
-    y_max=bounds.y_max,
+    bail_mag=float(bail_mag),
+    x_min=float(bounds.x_min),
+    x_max=float(bounds.x_max),
+    y_min=float(bounds.y_min),
+    y_max=float(bounds.y_max),
     width=image_config.width,
     height=image_config.height
 )

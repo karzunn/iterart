@@ -6,9 +6,12 @@
 pip install iterart
 ```
 
-# Examples
+# Render Functions
 
 ## Nebulabrot
+
+### Examples
+
 
 ```python
 from iterart.nebulabrot import nebulabrot
@@ -38,18 +41,6 @@ rendering.save("render.png")
 ```
 ![](samples/nebulabrot.png)
 
-## A More Complex Equation
-
-```python
-equation = """
-Complex neg_imag = { -z.imag, 0 };
-z=add(add(multiply(z,z),c),neg_imag)
-"""
-```
-![](samples/imaginary.png)
-
-### Creating Equations
-
 Equations are written in OpenCL. Every equation has access to a "z" and "c" value. The "c" value is a location on the complex plane. The "z" value will always begin at zero for the iterations. Both values are structs of type 'Complex' and require the following functions to manipulate them:
 
 - add
@@ -57,9 +48,14 @@ Equations are written in OpenCL. Every equation has access to a "z" and "c" valu
 - multiply
 - divide
 
-You can access the imaginary and real components using the 'imag' and 'real' properties. See [A More Complex Equation](#a-more-complex-equation) for an example.
-
-## Color Images
+You can access the imaginary and real components using the 'imag' and 'real' properties. For example:
+```python
+equation = """
+Complex neg_imag = { -z.imag, 0 };
+z=add(add(multiply(z,z),c),neg_imag)
+"""
+```
+![](samples/imaginary.png)
 
 To produce color renderings, you can combine grayscale renderings into an RGB image. Since renderings are PIL images, we can use tools from that package to accomplish this.
 
@@ -121,3 +117,48 @@ rgb_image = rgb_image.transpose(Image.Transpose.ROTATE_270)
 rgb_image.save("color.png")
 ```
 ![](samples/color.png)
+
+## Attractors
+
+### Clifford
+
+```python
+from matplotlib import pyplot as plt
+import numpy as np
+from iterart.attractors import clifford
+from iterart.shared import Bounds, ImageConfig, BitDepth, DynamicRangeBoost, GPU
+from PIL import Image
+
+
+gpu = GPU()
+
+bounds = Bounds(-3, 3, -3, 3)
+image_config = ImageConfig(
+    width=1000,
+    height=1000,
+    bit_depth=BitDepth.EIGHT,
+    dynamic_range_boost=DynamicRangeBoost.log
+)
+
+render = clifford(
+    gpu=gpu,
+    image_config=image_config,
+    step_size=0.02, #A grid scan is performed when choosing initial x and y values, this is the spacing used.
+    max_iter=10000,
+    bounds=bounds,
+    a=1.7, b=1.7, c=0.6, d=1.2 #These correspond to the constants of the clifford attractor equations.
+)
+
+# Apply colormap from matplotlib (e.g., 'inferno', 'viridis', 'plasma')
+image_arr = np.array(render)
+colormap = plt.get_cmap("afmhot")
+rgba = colormap(image_arr)
+
+# Convert RGBA to RGB (discard the alpha channel)
+rgb = (rgba[:, :, :3] * 255).astype(np.uint8)
+
+# Convert back to PIL image
+rgb_render = Image.fromarray(rgb)
+rgb_render.save("clifford.png")
+```
+![](samples/clifford.png)
