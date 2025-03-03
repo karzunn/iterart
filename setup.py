@@ -7,7 +7,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name = 'iterart',
-    version = '0.3.0',
+    version = '0.4.0',
     author = "Carson O'Ffill",
     author_email = 'offillcarson@gmail.com',
     license = 'MIT',
@@ -17,10 +17,13 @@ setup(
     url = 'https://github.com/karzunn/iterart',
     py_modules = ['iterart'],
     packages = find_packages(),
-    install_requires = [requirements],
-    python_requires='>=3.12',
+    install_requires = requirements,
+    python_requires='>=3.10',
     classifiers=[
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Operating System :: OS Independent",
     ]
 )
