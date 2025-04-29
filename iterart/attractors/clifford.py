@@ -1,5 +1,5 @@
 from PIL import Image
-from ..shared import ImageConfig, GPU, Bounds, get_array_buffer, collect_array
+from ..shared import ImageConfig, GPU, Bounds
 import numpy as np
 import pyopencl as cl
 
@@ -26,13 +26,13 @@ def clifford(
     x_vals, y_vals = _init_arrays(step_size, bounds)
     image_data = np.zeros(image_config.height * image_config.width, dtype=np.uint32)
 
-    d_x_vals = get_array_buffer(gpu, x_vals)
-    d_y_vals = get_array_buffer(gpu, y_vals)
-    d_image_data = get_array_buffer(gpu, image_data)
+    d_x_vals = gpu.get_array_buffer(x_vals)
+    d_y_vals = gpu.get_array_buffer(y_vals)
+    d_image_data = gpu.get_array_buffer(image_data)
     kernel_str = kernel(image_config, max_iter, bounds, a, b, c, d)
     program = cl.Program(gpu.ctx, kernel_str).build()
     program.render(gpu.queue, (len(x_vals),), None, d_x_vals, d_y_vals, d_image_data)
-    collect_array(gpu, d_image_data, image_data)
+    gpu.collect_array(d_image_data, image_data)
 
     image_data = image_config.dr_func(image_data)
     image_data = ((image_data / np.max(image_data)) * image_config.max_val).astype(image_config.numpy_dtype)

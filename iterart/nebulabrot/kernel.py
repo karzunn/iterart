@@ -51,7 +51,7 @@ float mag_squared(Complex z) {{
 __kernel void render(
     __global float *c_real, __global float *c_imag,
     __global float *z_real, __global float *z_imag,
-    __global int *image_data
+    __global uint *image_data
 ) 
 {{
     int i = get_global_id(0);
